@@ -18,13 +18,19 @@ After using `revalidatePath('/dashboard')` in a server action, navigating to a s
 
 After revalidating, navigation should be instant and display the loading.
 
+## How to reproduce
+
+- `npm run build && npm run start`
+- Open http://localhost:3000/dashboard/invoices/create, create a new invoice
+- Click on the dashboard link, observe that navigation is blocked
+
 ## Routes:
 
 - `/dashboard`: Static page aggregating invoice data wrapped in a Suspense boundary using loading.js
 - `/invoices`: Dynamic page fetching all invoices
-- `/invoices/create`: Form to create invoices
+- `/invoices/create`: Form to create invoices calling a server action
 
 ## Notes:
 
-- Issue seem to be present only with the production build
+- Issue seems to be present only with the production build
 - Changing the `/dashboard` route to be dynamic, using `cookies()` fixes the problem.
