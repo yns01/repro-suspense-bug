@@ -1,34 +1,32 @@
 import { invoices, customers, revenue, users } from '../lib/placeholder-data'
-import pg from 'pg'
+import sqlite3 from 'sqlite3'
+import { open } from 'sqlite'
+import { v4 as uuidv4 } from 'uuid'
 
-const { Client } = pg
-const client = new Client({
-  host: 'localhost',
-  user: 'postgres',
-  database: 'nextjsdashboaard',
+const db = await open({
+  filename: 'local.db',
+  driver: sqlite3.Database,
 })
-await client.connect()
 
 async function seedUsers() {
-  await client.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`)
-  await client.query(`
+  await db.exec(`
     CREATE TABLE IF NOT EXISTS users (
-      id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+      id TEXT PRIMARY KEY,
       name VARCHAR(255) NOT NULL,
       email TEXT NOT NULL UNIQUE,
       password TEXT NOT NULL
     );
-    `)
+  `)
 
   const insertedUsers = await Promise.all(
     users.map(async (user) => {
-      return client.query(
+      return db.run(
         `
         INSERT INTO users (id, name, email, password)
-        VALUES ($1, $2, $3, $4)
-        ON CONFLICT (id) DO NOTHING;
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(id) DO NOTHING;
       `,
-        Object.values(user)
+        [user.id, user.name, user.email, user.password]
       )
     })
   )
@@ -37,12 +35,10 @@ async function seedUsers() {
 }
 
 async function seedInvoices() {
-  await client.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`)
-
-  await client.query(`
+  await db.exec(`
     CREATE TABLE IF NOT EXISTS invoices (
-      id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-      customer_id UUID NOT NULL,
+      id TEXT PRIMARY KEY,
+      customer_id TEXT NOT NULL,
       amount INT NOT NULL,
       status VARCHAR(255) NOT NULL,
       date DATE NOT NULL
@@ -50,27 +46,26 @@ async function seedInvoices() {
   `)
 
   const insertedInvoices = await Promise.all(
-    invoices.map((invoice) =>
-      client.query(
+    invoices.map((invoice) => {
+      const id = uuidv4()
+      return db.run(
         `
-        INSERT INTO invoices (customer_id, amount, status, date)
-        VALUES ($1, $2, $3, $4)
-        ON CONFLICT (id) DO NOTHING;
+        INSERT INTO invoices (id, customer_id, amount, status, date)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO NOTHING;
       `,
-        Object.values(invoice)
+        [id, invoice.customer_id, invoice.amount, invoice.status, invoice.date]
       )
-    )
+    })
   )
 
   return insertedInvoices
 }
 
 async function seedCustomers() {
-  await client.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`)
-
-  await client.query(`
+  await db.exec(`
     CREATE TABLE IF NOT EXISTS customers (
-      id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+      id TEXT PRIMARY KEY,
       name VARCHAR(255) NOT NULL,
       email VARCHAR(255) NOT NULL,
       image_url VARCHAR(255) NOT NULL
@@ -78,23 +73,23 @@ async function seedCustomers() {
   `)
 
   const insertedCustomers = await Promise.all(
-    customers.map((customer) =>
-      client.query(
+    customers.map((customer) => {
+      return db.run(
         `
         INSERT INTO customers (id, name, email, image_url)
-        VALUES ($1, $2, $3, $4)
-        ON CONFLICT (id) DO NOTHING;
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(id) DO NOTHING;
       `,
-        Object.values(customer)
+        [customer.id, customer.name, customer.email, customer.image_url]
       )
-    )
+    })
   )
 
   return insertedCustomers
 }
 
 async function seedRevenue() {
-  await client.query(`
+  await db.exec(`
     CREATE TABLE IF NOT EXISTS revenue (
       month VARCHAR(4) NOT NULL UNIQUE,
       revenue INT NOT NULL
@@ -103,13 +98,13 @@ async function seedRevenue() {
 
   const insertedRevenue = await Promise.all(
     revenue.map((rev) =>
-      client.query(
+      db.run(
         `
         INSERT INTO revenue (month, revenue)
-        VALUES ($1, $2)
-        ON CONFLICT (month) DO NOTHING;
+        VALUES (?, ?)
+        ON CONFLICT(month) DO NOTHING;
       `,
-        Object.values(rev)
+        [rev.month, rev.revenue]
       )
     )
   )
@@ -124,9 +119,11 @@ export async function GET() {
     await seedInvoices()
     await seedRevenue()
 
-    return Response.json({ message: 'Database seeded successfully' })
+    return new Response(JSON.stringify({ message: 'Database seeded successfully' }), {
+      status: 200,
+    })
   } catch (error) {
     console.log(error)
-    return Response.json({ error }, { status: 500 })
+    return new Response(JSON.stringify({ error }), { status: 500 })
   }
 }

@@ -2,8 +2,8 @@ import { fetchCardData } from '@/app/lib/data'
 // import { cookies } from 'next/headers'
 
 export default async function Page() {
-  //   const c = await cookies()
-  //   console.log(c)
+  // const c = await cookies()
+  // console.log(c)
   const { totalPaidInvoices, totalPendingInvoices, numberOfCustomers, numberOfInvoices } =
     await fetchCardData()
 

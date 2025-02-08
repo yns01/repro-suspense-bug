@@ -3,7 +3,7 @@ import Link from 'next/link'
 // export const dynamic = 'force-dynamic'
 
 const links = [
-  { name: 'Home', href: '/dashboard' },
+  { name: 'Dashboard', href: '/dashboard' },
   {
     name: 'Invoices',
     href: '/dashboard/invoices',
